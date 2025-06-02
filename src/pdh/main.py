@@ -163,8 +163,10 @@ def inc_list(ctx, everything, user, new, ack, output, snooze, resolve, high, low
         userid = pd.users.id(query=user, key="name")
 
     filter_re = None
+    filter_excluded_re = None
     try:
         filter_re = re.compile(regexp)
+        filter_excluded_re = re.compile(excluded_filter_re)
     except Exception as e:
         print(f"[red]Invalid regular expression: {str(e)}[/red]")
         sys.exit(-2)
@@ -225,8 +227,8 @@ def inc_list(ctx, everything, user, new, ack, output, snooze, resolve, high, low
         if filter_re:
             incs = Filters.apply(incs, filters=[Filters.regexp("title", filter_re)])
 
-        if excluded_filter_re:
-            incs = Filters.apply(incs, filters=[Filters.not_regexp("title", filter_re)])
+        if filter_excluded_re:
+            incs = Filters.apply(incs, filters=[Filters.not_regexp("title", filter_excluded_re)])
 
         if service_re:
             incs = Transformations.apply(incs, {"service": Transformations.extract("service.summary")}, preserve=True)
