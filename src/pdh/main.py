@@ -134,7 +134,7 @@ def reassign(ctx, incident, user):
 @click.option("-t", "--timeout", default=5, help="Watch every x seconds (work only if -w is flagged)")
 @click.option("--rules", is_flag=True, default=False, help="apply rules from a path (see --rules--path")
 @click.option("--rules-path", required=False, default="~/.config/pdh_rules", help="Apply all executable find in this path")
-@click.option("-R", "--regexp", default="", help="regexp to filter incidents")
+@click.option("-R", "--regexp", help="regexp to filter incidents", default=None)
 @click.option("--excluded_regexp", "excluded_filter_re", help="Exclude incident of these titles (regexp)", default=None)
 @click.option("-o","--output","output",help="output format",required=False,type=click.Choice(VALID_OUTPUTS),default="table")
 @click.option("-f", "--fields", "fields", required=False, help="Fields to filter and output", default=None)
@@ -162,11 +162,11 @@ def inc_list(ctx, everything, user, new, ack, output, snooze, resolve, high, low
     if user:
         userid = pd.users.id(query=user, key="name")
 
-    filter_re = None
-    filter_excluded_re = None
     try:
-        filter_re = re.compile(regexp)
-        filter_excluded_re = re.compile(excluded_filter_re)
+        filter_re = None
+        filter_excluded_re = None
+        if regexp: filter_re = re.compile(regexp)
+        if excluded_filter_re: filter_excluded_re = re.compile(excluded_filter_re)
     except Exception as e:
         print(f"[red]Invalid regular expression: {str(e)}[/red]")
         sys.exit(-2)
