@@ -135,6 +135,7 @@ def reassign(ctx, incident, user):
 @click.option("--rules", is_flag=True, default=False, help="apply rules from a path (see --rules--path")
 @click.option("--rules-path", required=False, default="~/.config/pdh_rules", help="Apply all executable find in this path")
 @click.option("-R", "--regexp", default="", help="regexp to filter incidents")
+@click.option("--excluded_regexp", "excluded_filter_re", help="Exclude incident of these titles (regexp)", default=None)
 @click.option("-o","--output","output",help="output format",required=False,type=click.Choice(VALID_OUTPUTS),default="table")
 @click.option("-f", "--fields", "fields", required=False, help="Fields to filter and output", default=None)
 @click.option("--alerts", "alerts", required=False, help="Show alerts associated to each incidents", is_flag=True, default=False)
@@ -144,7 +145,7 @@ def reassign(ctx, incident, user):
 @click.option("--sort", "sort_by", required=False, help="Sort by field name", default=None)
 @click.option("--reverse", "reverse_sort", required=False, help="Reverse the sort", is_flag=True, default=False)
 @click.option("-T", "--teams", "teams", required=False, help="Filter only incidents assigned to this team IDs", default=None)
-def inc_list(ctx, everything, user, new, ack, output, snooze, resolve, high, low, watch, timeout, regexp, rules, rules_path, fields, alerts, alert_fields, service_re, excluded_service_re, sort_by, reverse_sort, teams):
+def inc_list(ctx, everything, user, new, ack, output, snooze, resolve, high, low, watch, timeout, regexp, excluded_filter_re, rules, rules_path, fields, alerts, alert_fields, service_re, excluded_service_re, sort_by, reverse_sort, teams):
 
     pd = PagerDuty(ctx.obj)
 
@@ -221,7 +222,11 @@ def inc_list(ctx, everything, user, new, ack, output, snooze, resolve, high, low
             else:
                 print(ret)
 
-        incs = Filters.apply(incs, filters=[Filters.regexp("title", filter_re)])
+        if filter_re:
+            incs = Filters.apply(incs, filters=[Filters.regexp("title", filter_re)])
+
+        if excluded_filter_re:
+            incs = Filters.apply(incs, filters=[Filters.not_regexp("title", filter_re)])
 
         if service_re:
             incs = Transformations.apply(incs, {"service": Transformations.extract("service.summary")}, preserve=True)
