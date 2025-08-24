@@ -36,6 +36,7 @@ orange = {
 
 ilist = [apple, kiwi, orange]
 
+
 def test_filter_eq():
     result: List[Any] = Filter.apply(ilist, [Filter.eq("intfield", 23)])
     assert len(result) == 1
@@ -61,7 +62,7 @@ def test_filter_ge():
 
 
 def test_filter_gt():
-    result = Filter.apply(ilist,  [Filter.gt("intfield", 40)])
+    result = Filter.apply(ilist, [Filter.gt("intfield", 40)])
     assert len(result) == 1
     assert result[0] == apple
 
@@ -73,7 +74,7 @@ def test_filter_inList():
 
 
 def test_filter_instr():
-    result = Filter.apply(ilist,  [Filter.inStr("afield", "kiwi")])
+    result = Filter.apply(ilist, [Filter.inStr("afield", "kiwi")])
     assert len(result) == 1
     assert result[0] == kiwi
 
@@ -85,14 +86,16 @@ def test_filter_ieq():
 
 
 def test_filter_regexp():
-    result = Filter.apply(ilist,  [Filter.regexp("afield", "this is .*")])
+    result = Filter.apply(ilist, [Filter.regexp("afield", "this is .*")])
     assert len(result) == 3
     assert result == ilist
+
 
 def test_filter_not_regexp():
     result = Filter.apply(ilist, [Filter.not_regexp("afield", "orange")])
     assert len(result) == 2
     assert result == [apple, kiwi]
+
 
 def test_transformation_extract_field():
     trans = {"afield": Transformations.extract("afield")}

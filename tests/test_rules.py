@@ -20,6 +20,7 @@ import io
 from unittest.mock import patch, MagicMock
 from pdh.rules import exec, __load_data_from_stdin, rule, chain
 
+
 def test_exec():
     with patch("subprocess.Popen") as mock_popen:
         mock_process = MagicMock()
@@ -32,6 +33,7 @@ def test_exec():
         assert response.stderr == "error"
         assert response.rc == 0
 
+
 def test_load_data_from_stdin():
     test_data = {"key": "value"}
     with patch("sys.stdin", io.StringIO(json.dumps(test_data))):
@@ -39,7 +41,6 @@ def test_load_data_from_stdin():
 
 
 def test_rule_decorator(mock_config_load):
-
     @rule
     def dummy_rule(alerts, pagerduty, Filters, Transformations):
         return {"processed": True, "alerts": alerts}
@@ -47,7 +48,7 @@ def test_rule_decorator(mock_config_load):
     test_input = {"key": "value"}
     with patch("pdh.rules.__load_data_from_stdin", return_value=test_input):
         with patch("sys.stdout", new_callable=io.StringIO) as mock_stdout:
-            result = dummy_rule()   # typing: ignore
+            result = dummy_rule()  # typing: ignore
             assert json.loads(mock_stdout.getvalue()) == {"processed": True, "alerts": test_input}
             assert result == {"processed": True, "alerts": test_input}
 
@@ -63,14 +64,17 @@ class MockIncidents:
         else:
             return {}
 
+
 @pytest.fixture
 def mock_incidents():
     return MockIncidents()
+
 
 @pytest.fixture
 def mock_api():
     with patch("pdh.rules.Incidents", return_value=MockIncidents()) as mock:
         yield mock
+
 
 @pytest.fixture
 def mock_config_load():

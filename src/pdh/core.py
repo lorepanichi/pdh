@@ -22,8 +22,8 @@ from .output import print, print_items
 from typing import List
 from datetime import timezone
 
-class PDH(object):
 
+class PDH(object):
     @staticmethod
     def list_user(cfg: Config, output: str, fields: list | None = None) -> bool:
         try:
@@ -83,11 +83,11 @@ class PDH(object):
             return False
 
     @staticmethod
-    def list_teams(cfg: Config, mine: bool = True, output='table', fields=None) -> bool:
+    def list_teams(cfg: Config, mine: bool = True, output="table", fields=None) -> bool:
         try:
             pd = PagerDuty(cfg)
             if mine:
-                teams = dict(pd.me)['teams'] if 'teams' in pd.me else []
+                teams = dict(pd.me)["teams"] if "teams" in pd.me else []
             else:
                 teams = pd.teams.list()
 
@@ -120,7 +120,9 @@ class PDH(object):
             return False
 
     @staticmethod
-    def list_services(cfg: Config, output: str = 'table', fields: List | None = None, sort_by:  str| None = None, reverse_sort: bool = False, status: str = "active,warning,critical") -> bool:
+    def list_services(
+        cfg: Config, output: str = "table", fields: List | None = None, sort_by: str | None = None, reverse_sort: bool = False, status: str = "active,warning,critical"
+    ) -> bool:
         try:
             pd = PagerDuty(cfg)
             svcs = pd.services.list()
@@ -131,7 +133,7 @@ class PDH(object):
             if type(fields) is str:
                 fields = fields.lower().strip().split(",")
             else:
-                fields = ["id", "name", "description", "status","created_at", "updated_at", "html_url"]
+                fields = ["id", "name", "description", "status", "created_at", "updated_at", "html_url"]
 
             if output != "raw":
                 transformations = dict()
@@ -140,13 +142,15 @@ class PDH(object):
                     transformations[f] = Transformations.extract(f)
                     # special cases
                     if f == "status":
-                        transformations[f] = Transformations.extract_decorate("status", color_map={"active": "green", "warning": "yellow", "critical": "red", "unknown": "gray", "disabled": "gray"}, change_map={
-                                                                            "active": "OK", "warning": "WARN", "critical": "CRIT", "unknown": "❔", "disabled": "off"})
+                        transformations[f] = Transformations.extract_decorate(
+                            "status",
+                            color_map={"active": "green", "warning": "yellow", "critical": "red", "unknown": "gray", "disabled": "gray"},
+                            change_map={"active": "OK", "warning": "WARN", "critical": "CRIT", "unknown": "❔", "disabled": "off"},
+                        )
                     if f == "url":
                         transformations[f] = Transformations.extract("html_url")
                     if f in ["created_at", "updated_at"]:
-                        transformations[f] = Transformations.extract_date(
-                            f, "%Y-%m-%dT%H:%M:%S%z", timezone.utc)
+                        transformations[f] = Transformations.extract_date(f, "%Y-%m-%dT%H:%M:%S%z", timezone.utc)
 
                 filtered = Transformations.apply(svcs, transformations)
             else:
@@ -161,26 +165,24 @@ class PDH(object):
                 print(s)
 
             if sort_by:
-                sort_fields: str | list[str] = sort_by.split(",") if ',' in sort_by else sort_by
+                sort_fields: str | list[str] = sort_by.split(",") if "," in sort_by else sort_by
 
                 if isinstance(sort_fields, list) and len(sort_fields) > 1:
-                    filtered = sorted(filtered, key=lambda x: [
-                                    x[k] for k in sort_fields], reverse=reverse_sort)
+                    filtered = sorted(filtered, key=lambda x: [x[k] for k in sort_fields], reverse=reverse_sort)
                 else:
-                    filtered = sorted(
-                        filtered, key=lambda x: x[sort_fields], reverse=reverse_sort)
+                    filtered = sorted(filtered, key=lambda x: x[sort_fields], reverse=reverse_sort)
 
             print_items(filtered, output, plain_print_f=plain_print_f)
             return True
 
         except UnauthorizedException as e:
-                print(f"[red]{e}[/red]")
-                return False
+            print(f"[red]{e}[/red]")
+            return False
         except KeyError:
-                print(f"[red]Invalid sort field: {sort_by}[/red]")
-                ff = ", ".join(fields) if fields else ""
-                print(f"[yellow]Available fields: {ff}[/yellow]")
-                return False
+            print(f"[red]Invalid sort field: {sort_by}[/red]")
+            ff = ", ".join(fields) if fields else ""
+            print(f"[yellow]Available fields: {ff}[/yellow]")
+            return False
 
     @staticmethod
     def ack(cfg: Config, incIDs: list = []) -> None:
@@ -208,7 +210,7 @@ class PDH(object):
         incs = pd.incidents.list()
         incs = Filter.apply(incs, filters=[Filter.inList("id", incIDs)])
         for id in incIDs:
-            print(f"Snoozing incident {id} for { str(datetime.timedelta(seconds=duration))}")
+            print(f"Snoozing incident {id} for {str(datetime.timedelta(seconds=duration))}")
 
         pd.incidents.snooze(incs, duration)
 

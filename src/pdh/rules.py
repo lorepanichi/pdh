@@ -98,7 +98,6 @@ def chain(incs: list, path: str, pd: PagerDuty | None = None):
 
 
 def client(config_file: str = "~/.config/pdh.yaml") -> PagerDuty:
-
     """
     Initialize the Pagerduty APIs in a more easy way
       Parameters:

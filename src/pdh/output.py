@@ -14,11 +14,12 @@
 # You should have received a copy of the GNU General Public License
 # along with this program. If not, see <http://www.gnu.org/licenses/>.
 #
-import yaml
 import json
-from rich.table import Table
-from rich.console import Console
+
+import yaml
 from rich import print as rich_print
+from rich.console import Console
+from rich.table import Table
 
 VALID_OUTPUTS = ["plain", "table", "json", "yaml", "raw"]
 
@@ -84,22 +85,9 @@ class Output(object):
 
 
 def print_items(
-        items,
-        output,
-        skip_columns: list = [],
-        plain_print_f = None,
-        console: Console|None = None,
-        odd_color: str = "grey93 on black",
-        even_color: str = "grey50 on black"
-    ) -> None:
-
-    getattr(Output(), output)(
-        items=items,
-        skip_columns=skip_columns,
-        print_f=plain_print_f,
-        console=console,
-        odd_color=odd_color,
-        even_color=even_color)
+    items, output, skip_columns: list = [], plain_print_f=None, console: Console | None = None, odd_color: str = "grey93 on black", even_color: str = "grey50 on black"
+) -> None:
+    getattr(Output(), output)(items=items, skip_columns=skip_columns, print_f=plain_print_f, console=console, odd_color=odd_color, even_color=even_color)
 
 
 def print(*args, **kwargs) -> None:

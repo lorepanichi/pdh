@@ -49,8 +49,7 @@ tasks:
 
   dependency-install:
     cmds:
-      - source .venv/bin/activate
-      - poetry install
+      - sh -c ". .venv/bin/activate && poetry install"
     sources:
       - poetry.lock
       - pyproject.toml
