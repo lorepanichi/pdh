@@ -52,7 +52,6 @@ class RuleInvalidOutput(TypeError):
 
 
 class PagerDuty(object):
-
     # Expose the constants to the outside (rules)
 
     INCIDENT_STATUS_TRIGGERED = STATUS_TRIGGERED
@@ -69,8 +68,7 @@ class PagerDuty(object):
         super().__init__()
 
         self.cfg: Config = cfg
-        self.session: RestApiV2Client = RestApiV2Client(
-            cfg["apikey"], default_from=cfg["email"])
+        self.session: RestApiV2Client = RestApiV2Client(cfg["apikey"], default_from=cfg["email"])
         self.session.max_network_attempts = 5
         self.users = Users(self.cfg, self.session)
         self.services = Services(self.cfg, self.session)
@@ -81,14 +79,12 @@ class PagerDuty(object):
         except Error as e:
             raise UnauthorizedException(str(e))
         try:
-            self.me: List[Any] | Dict[Any,
-                                      Any] = self.session.rget("/users/me")
+            self.me: List[Any] | Dict[Any, Any] = self.session.rget("/users/me")
         except Error:
             self.me = {}
 
 
 class Incidents(object):
-
     def __init__(self, cfg: Config, session: RestApiV2Client) -> None:
         self.cfg = cfg
         self.session = session
@@ -131,8 +127,7 @@ class Incidents(object):
     def snooze(self, incs, duration=14400) -> None:
         for i in incs:
             try:
-                self.session.post(
-                    f"/incidents/{i['id']}/snooze", json={"duration": duration})
+                self.session.post(f"/incidents/{i['id']}/snooze", json={"duration": duration})
             except Exception as e:
                 print(e)
 
@@ -154,8 +149,7 @@ class Incidents(object):
 
     def reassign(self, incs, uids: List[str]) -> None:
         for i in incs:
-            assignments = [
-                {"assignee": {"id": u, "type": "user_reference"}} for u in uids]
+            assignments = [{"assignee": {"id": u, "type": "user_reference"}} for u in uids]
             new_inc = {
                 "id": i["id"],
                 "type": "incident_reference",
@@ -168,7 +162,7 @@ class Incidents(object):
 
     def apply(self, incs: List[Any] | Dict[Any, Any] | Iterator[Any], paths: List[str], printFunc, errFunc: Callable) -> List[Any] | Dict[Any, Any] | Iterator[Any]:
         try:
-            output = incs   # initial input
+            output = incs  # initial input
             for script in paths:
                 # chain the output of the previous script to the input of the next
                 output = self.apply_single(output, script)
@@ -181,16 +175,14 @@ class Incidents(object):
         return incs
 
     def apply_single(self, incs, script: str) -> Dict:
-        process = subprocess.Popen(script, text=True, shell=True,
-                                   stderr=subprocess.PIPE, stdout=subprocess.PIPE, stdin=subprocess.PIPE)
+        process = subprocess.Popen(script, text=True, shell=True, stderr=subprocess.PIPE, stdout=subprocess.PIPE, stdin=subprocess.PIPE)
         stdout, stderr = process.communicate(json.dumps(incs))
         process.wait()
 
         if process.returncode == 0:
             output = json.loads(stdout)
             if type(output) not in [dict, list, tuple]:
-                raise RuleInvalidOutput(
-                    f"invalid rule output it must be a json object, found: {type(output)}")
+                raise RuleInvalidOutput(f"invalid rule output it must be a json object, found: {type(output)}")
         else:
             raise RuleExecutionError(f"Error executing rule: {stderr}")
 
@@ -198,7 +190,6 @@ class Incidents(object):
 
 
 class Users(object):
-
     def __init__(self, cfg: Config, session: RestApiV2Client) -> None:
         self.cfg = cfg
         self.session = session
@@ -255,7 +246,6 @@ class Users(object):
 
 
 class Services(object):
-
     def __init__(self, cfg: Config, session: RestApiV2Client) -> None:
         self.cfg = cfg
         self.session = session
@@ -278,8 +268,7 @@ class Services(object):
         def equiv(s):
             return query.lower() in s[key].lower()
 
-        services = [u for u in filter(
-            equiv, self.session.iter_all("services"))]
+        services = [u for u in filter(equiv, self.session.iter_all("services"))]
         return services
 
     def id(self, query: str, key: str = "name") -> List[str]:
@@ -290,7 +279,6 @@ class Services(object):
 
 
 class Teams(object):
-
     def __init__(self, cfg: Config, session: RestApiV2Client) -> None:
         self.cfg = cfg
         self.session = session

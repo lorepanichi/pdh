@@ -40,18 +40,15 @@ def test_main_version():
 def test_print_items_table():
     items = [{"Title": "text", "Url": "https://localhost"}]
     expected = "┏━━━━━━━┳━━━━━━━━━━━━━━━━━━━┓\n┃ Title ┃ Url               ┃\n┡━━━━━━━╇━━━━━━━━━━━━━━━━━━━┩\n│ text  │ https://localhost │\n└───────┴───────────────────┘\n"
-    console = Console(force_terminal=True, file=io.StringIO(),
-                      _environ={}, color_system=None)
-    main.print_items(items, output="table", skip_columns=[],
-                     plain_print_f=None, console=console)
+    console = Console(force_terminal=True, file=io.StringIO(), _environ={}, color_system=None)
+    main.print_items(items, output="table", skip_columns=[], plain_print_f=None, console=console)
     assert console.file.getvalue() == expected
 
 
 def test_print_items_yaml():
     items = [{"Title": "text", "Url": "https://localhost"}]
     expected = "- Title: text\n  Url: https://localhost\n\n"
-    console = Console(force_terminal=True, file=io.StringIO(),
-                      _environ={}, color_system=None)
+    console = Console(force_terminal=True, file=io.StringIO(), _environ={}, color_system=None)
     main.print_items(items, output="yaml", console=console)
     assert console.file.getvalue() == expected
 
@@ -65,8 +62,7 @@ def test_print_items_json():
   }
 ]
 """
-    console = Console(force_terminal=True, file=io.StringIO(),
-                      _environ={}, color_system=None)
+    console = Console(force_terminal=True, file=io.StringIO(), _environ={}, color_system=None)
     main.print_items(items, output="json", console=console)
     assert console.file.getvalue() == expected
 
@@ -74,8 +70,7 @@ def test_print_items_json():
 def test_print_items_raw():
     items = [{"Title": "text", "Url": "https://localhost"}]
     expected = "[{'Title': 'text', 'Url': 'https://localhost'}]\n"
-    console = Console(force_terminal=True, file=io.StringIO(),
-                      _environ={}, color_system=None)
+    console = Console(force_terminal=True, file=io.StringIO(), _environ={}, color_system=None)
     main.print_items(items, output="raw", console=console)
     assert console.file.getvalue() == expected
 
@@ -83,7 +78,6 @@ def test_print_items_raw():
 def test_print_items_plain():
     items = [{"Title": "text", "Url": "https://localhost"}]
     expected = "{'Title': 'text', 'Url': 'https://localhost'}\n"
-    console = Console(force_terminal=True, file=io.StringIO(),
-                      _environ={}, color_system=None)
+    console = Console(force_terminal=True, file=io.StringIO(), _environ={}, color_system=None)
     main.print_items(items, output="plain", console=console)
     assert console.file.getvalue() == expected

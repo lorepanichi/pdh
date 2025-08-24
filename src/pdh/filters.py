@@ -19,6 +19,7 @@ from typing import Callable, Iterator, List, Dict, Any
 
 import jsonpath_ng
 
+
 class Filter(object):
     """
     Filter is a collection of methods to filter out items from an iterator based on a set of conditions.
@@ -36,6 +37,7 @@ class Filter(object):
         Returns:
             Callable[[dict], bool]: A function that takes a dictionary and returns True if the value of the specified field is less than or equal to the given value, otherwise False.
         """
+
         def f(item: dict) -> bool:
             expr = jsonpath_ng.parse(field)
             values = [match.value for match in expr.find(item)]
@@ -46,7 +48,7 @@ class Filter(object):
         return f
 
     @staticmethod
-    def ge(field: str, value: int)-> Callable[[dict], bool]:
+    def ge(field: str, value: int) -> Callable[[dict], bool]:
         """
         Creates a filter function that checks if the value of a specified field in a dictionary is greater than or equal to a given value.
 
@@ -57,10 +59,11 @@ class Filter(object):
         Returns:
             Callable[[dict], bool]: A function that takes a dictionary and returns True if the value of the specified field is greater than or equal to the given value, otherwise False.
         """
+
         def f(item: dict) -> bool:
             expr = jsonpath_ng.parse(field)
             values = [match.value for match in expr.find(item)]
-            if len(values)>0 and values[0] >= value:
+            if len(values) > 0 and values[0] >= value:
                 return True
             return False
 
@@ -78,6 +81,7 @@ class Filter(object):
         Returns:
             Callable[[dict], bool]: A function that takes a dictionary and returns True if the specified field's value is less than the given value, otherwise False.
         """
+
         def f(item: dict) -> bool:
             expr = jsonpath_ng.parse(field)
             values = [match.value for match in expr.find(item)]
@@ -100,6 +104,7 @@ class Filter(object):
         Returns:
             Callable[[dict], bool]: A function that takes a dictionary and returns True if the value of the specified field is greater than the given value, otherwise False.
         """
+
         def f(item: dict) -> bool:
             expr = jsonpath_ng.parse(field)
             values = [match.value for match in expr.find(item)]
@@ -124,6 +129,7 @@ class Filter(object):
             Callable[[dict], bool]: A function that takes a dictionary and returns True if the
             value of the specified field is in the list of values, otherwise False.
         """
+
         def f(item: dict) -> bool:
             expr = jsonpath_ng.parse(field)
             values = [match.value for match in expr.find(item)]
@@ -146,6 +152,7 @@ class Filter(object):
         Returns:
             Callable[[dict], bool]: A function that takes a dictionary as input and returns True if the value is found in the specified field, otherwise False.
         """
+
         def f(item: dict) -> bool:
             expr = jsonpath_ng.parse(field)
             values = [match.value for match in expr.find(item)]
@@ -168,6 +175,7 @@ class Filter(object):
         Returns:
             Callable[[dict], bool]: A function that takes a dictionary and returns True if the value of the specified field matches the given value (case-insensitive), otherwise False.
         """
+
         def f(item: dict) -> bool:
             expr = jsonpath_ng.parse(field)
             values = [match.value for match in expr.find(item)]

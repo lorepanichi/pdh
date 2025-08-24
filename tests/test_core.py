@@ -1,4 +1,3 @@
-
 #
 # This file is part of the pdh (https://github.com/mbovo/pdh).
 # Copyright (c) 2020-2025 Manuel Bovo.
@@ -20,22 +19,26 @@ from unittest.mock import patch, MagicMock
 from pdh.core import PDH
 from pdh.config import Config
 
+
 @pytest.fixture
 def mock_config():
     return MagicMock(spec=Config)
 
+
 @pytest.fixture
 def mock_users():
-    with patch('pdh.core.PagerDuty') as mock:
+    with patch("pdh.core.PagerDuty") as mock:
         yield mock
 
+
 def test_list_user_default_fields(mock_config, mock_users):
-    result = PDH.list_user(mock_config, 'raw')
+    result = PDH.list_user(mock_config, "raw")
     mock_users.assert_called_once()
     assert result is True
 
+
 def test_list_user_with_fields_list(mock_config, mock_users):
     fields = ["id", "email"]
-    result = PDH.list_user(mock_config, 'raw', fields=fields)
+    result = PDH.list_user(mock_config, "raw", fields=fields)
     mock_users.assert_called_once()
     assert result is True

@@ -18,6 +18,7 @@
 # Needed imports
 from pdh.rules import rule
 
+
 # This annotation make the main() method parsing stdin as a json and returning a json to stdout
 # Available arguments are
 # - alerts: the input data from pdh command line (a list of incidents in json format)
@@ -26,14 +27,11 @@ from pdh.rules import rule
 # - Transformations: useful transformation functions
 @rule
 def main(alerts, pagerduty, Filters, Transformations):
-
     # From the given input extract only incidents with the word "EC2" in title
-    filtered = Filters.apply(alerts, filters=[
-                    Filters.regexp("service.summary", ".*Graph.*")
-                ])
+    filtered = Filters.apply(alerts, filters=[Filters.regexp("service.summary", ".*Graph.*")])
 
     # # acknowledge all previously filtered incidents
-    #pagerduty.incidents.ack(filtered)
+    # pagerduty.incidents.ack(filtered)
 
     # # resolve all previously filtered incidents
     # pagerduty.incidents.resolve(filtered)
@@ -50,4 +48,4 @@ def main(alerts, pagerduty, Filters, Transformations):
 
 
 if __name__ == "__main__":
-    main()                  # type: ignore
+    main()  # type: ignore

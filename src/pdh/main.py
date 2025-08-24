@@ -14,28 +14,29 @@
 # You should have received a copy of the GNU General Public License
 # along with this program. If not, see <http://www.gnu.org/licenses/>.
 #
-import click
 import importlib.metadata
-import sys
-import re
 import os
+import re
+import sys
 import time
+
+import click
 from rich import print
 from rich.console import Console
-from .core import PDH
 
-from .pd import PagerDuty
-from .pd import (
-    STATUS_TRIGGERED,
-    STATUS_ACK,
-    STATUS_RESOLVED,
-    URGENCY_HIGH,
-    URGENCY_LOW,
-    DEFAULT_URGENCIES,
-)
 from . import Filters, Transformations
 from .config import load_and_validate, setup_config
-from .output import print_items, VALID_OUTPUTS
+from .core import PDH
+from .output import VALID_OUTPUTS, print_items
+from .pd import (
+    DEFAULT_URGENCIES,
+    STATUS_ACK,
+    STATUS_RESOLVED,
+    STATUS_TRIGGERED,
+    URGENCY_HIGH,
+    URGENCY_LOW,
+    PagerDuty,
+)
 
 
 @click.group(help="PDH - PagerDuty for Humans")
@@ -44,7 +45,7 @@ def main():
 
 
 @main.command(help="Create default configuration file")
-@click.option("-c","--config",default="~/.config/pdh.yaml",help="Configuration file location (default: ~/.config/pdh.yaml)")
+@click.option("-c", "--config", default="~/.config/pdh.yaml", help="Configuration file location (default: ~/.config/pdh.yaml)")
 def config(config):
     setup_config(config)
 
@@ -55,7 +56,7 @@ def version():
 
 
 @main.group(help="Operate on Users")
-@click.option("-c","--config",envvar="PDH_CONFIG",default="~/.config/pdh.yaml",help="Configuration file location (default: ~/.config/pdh.yaml)")
+@click.option("-c", "--config", envvar="PDH_CONFIG", default="~/.config/pdh.yaml", help="Configuration file location (default: ~/.config/pdh.yaml)")
 @click.pass_context
 def user(ctx, config):
     cfg = load_and_validate(config)
@@ -65,8 +66,8 @@ def user(ctx, config):
 
 @user.command(help="List users", name="ls")
 @click.pass_context
-@click.option("-o","--output","output",help="output format",required=False,type=click.Choice(VALID_OUTPUTS),default="table")
-@click.option("-f","--fields","fields",help="Filter fields",required=False,type=str,default=None,)
+@click.option("-o", "--output", "output", help="output format", required=False, type=click.Choice(VALID_OUTPUTS), default="table")
+@click.option("-f", "--fields", "fields", help="Filter fields", required=False, type=str, default=None)
 def user_list(ctx, output, fields):
     if not PDH.list_user(ctx.obj, output, fields):
         sys.exit(1)
@@ -75,15 +76,15 @@ def user_list(ctx, output, fields):
 @user.command(help="Retrieve an user by name or ID", name="get")
 @click.pass_context
 @click.argument("user")
-@click.option("-o", "--output", "output", help="output format", required=False, type=click.Choice(VALID_OUTPUTS), default="table",)
-@click.option( "-f", "--fields", "fields", help="Filter fields", required=False, type=str, default=None)
+@click.option("-o", "--output", "output", help="output format", required=False, type=click.Choice(VALID_OUTPUTS), default="table")
+@click.option("-f", "--fields", "fields", help="Filter fields", required=False, type=str, default=None)
 def user_get(ctx, user, output, fields):
     if not PDH.get_user(ctx.obj, user, output, fields):
         sys.exit(1)
 
 
 @main.group(help="Operate on Incidents")
-@click.option( "-c", "--config", envvar="PDH_CONFIG", default="~/.config/pdh.yaml", help="Configuration file location (default: ~/.config/pdh.yaml)")
+@click.option("-c", "--config", envvar="PDH_CONFIG", default="~/.config/pdh.yaml", help="Configuration file location (default: ~/.config/pdh.yaml)")
 @click.pass_context
 def inc(ctx, config):
     cfg = load_and_validate(config)
@@ -120,6 +121,7 @@ def snooze(ctx, incidentids, duration):
 def reassign(ctx, incident, user):
     PDH.reassign(ctx.obj, incident, user)
 
+
 @inc.command(help="List incidents", name="ls")
 @click.pass_context
 @click.option("-e", "--everything", help="List all incidents not only assigned to me", is_flag=True, default=False)
@@ -134,18 +136,43 @@ def reassign(ctx, incident, user):
 @click.option("-t", "--timeout", default=5, help="Watch every x seconds (work only if -w is flagged)")
 @click.option("--rules", is_flag=True, default=False, help="apply rules from a path (see --rules--path")
 @click.option("--rules-path", required=False, default="~/.config/pdh_rules", help="Apply all executable find in this path")
-@click.option("-R", "--regexp", default="", help="regexp to filter incidents")
-@click.option("-o","--output","output",help="output format",required=False,type=click.Choice(VALID_OUTPUTS),default="table")
+@click.option("-R", "--regexp", help="regexp to filter incidents", default=None)
+@click.option("--excluded-regexp", "excluded_filter_re", help="Exclude incident of these titles (regexp)", default=None)
+@click.option("-o", "--output", "output", help="output format", required=False, type=click.Choice(VALID_OUTPUTS), default="table")
 @click.option("-f", "--fields", "fields", required=False, help="Fields to filter and output", default=None)
 @click.option("--alerts", "alerts", required=False, help="Show alerts associated to each incidents", is_flag=True, default=False)
 @click.option("--alert-fields", "alert_fields", required=False, help="Show these alert fields only, comma separated", default=None)
-@click.option("-S","--service-re", "service_re", required=False, help="Show only incidents for this service (regexp)", default=None)
+@click.option("-S", "--service-re", "service_re", required=False, help="Show only incidents for this service (regexp)", default=None)
 @click.option("--excluded-service-re", "excluded_service_re", required=False, help="Exclude incident of these services (regexp)", default=None)
 @click.option("--sort", "sort_by", required=False, help="Sort by field name", default=None)
 @click.option("--reverse", "reverse_sort", required=False, help="Reverse the sort", is_flag=True, default=False)
 @click.option("-T", "--teams", "teams", required=False, help="Filter only incidents assigned to this team IDs", default=None)
-def inc_list(ctx, everything, user, new, ack, output, snooze, resolve, high, low, watch, timeout, regexp, rules, rules_path, fields, alerts, alert_fields, service_re, excluded_service_re, sort_by, reverse_sort, teams):
-
+def inc_list(
+    ctx,
+    everything,
+    user,
+    new,
+    ack,
+    output,
+    snooze,
+    resolve,
+    high,
+    low,
+    watch,
+    timeout,
+    regexp,
+    excluded_filter_re,
+    rules,
+    rules_path,
+    fields,
+    alerts,
+    alert_fields,
+    service_re,
+    excluded_service_re,
+    sort_by,
+    reverse_sort,
+    teams,
+):
     pd = PagerDuty(ctx.obj)
 
     # Prepare defaults
@@ -161,10 +188,12 @@ def inc_list(ctx, everything, user, new, ack, output, snooze, resolve, high, low
     if user:
         userid = pd.users.id(query=user, key="name")
 
-    filter_re = None
     try:
-        filter_re = re.compile(regexp)
-    except Exception as e:
+        if regexp:
+            filter_re = re.compile(regexp)
+        if excluded_filter_re:
+            filter_excluded_re = re.compile(excluded_filter_re)
+    except re.error as e:
         print(f"[red]Invalid regular expression: {str(e)}[/red]")
         sys.exit(-2)
 
@@ -176,7 +205,7 @@ def inc_list(ctx, everything, user, new, ack, output, snooze, resolve, high, low
     if type(fields) is str:
         fields = fields.lower().strip().split(",")
     else:
-        fields = ["id", "assignee", "title", "status", "created_at","service.summary"]
+        fields = ["id", "assignee", "title", "status", "created_at", "service.summary"]
     if alerts:
         fields.append("alerts")
 
@@ -188,14 +217,13 @@ def inc_list(ctx, everything, user, new, ack, output, snooze, resolve, high, low
     if type(teams) is str:
         if teams == "mine":
             teamNames = dict(pd.me)["teams"] if "teams" in dict(pd.me) else []
-            teams = [ t["id"] for t in teamNames if "id" in t ]
+            teams = [t["id"] for t in teamNames if "id" in t]
         else:
             teams = teams.lower().strip().split(",")
 
     if not everything and not userid:
         userid = pd.cfg["uid"]
     while True:
-
         incs = pd.incidents.list(userid, statuses=status, urgencies=urgencies, teams=teams)
 
         if rules:
@@ -212,7 +240,8 @@ def inc_list(ctx, everything, user, new, ack, output, snooze, resolve, high, low
 
             def printFunc(name: str):
                 print("[green]Applied rule:[/green]", name)
-            def errFunc(error:str):
+
+            def errFunc(error: str):
                 print("[red]Error:[/red]", error)
 
             ret = pd.incidents.apply(incs, scripts, printFunc, errFunc)
@@ -221,7 +250,11 @@ def inc_list(ctx, everything, user, new, ack, output, snooze, resolve, high, low
             else:
                 print(ret)
 
-        incs = Filters.apply(incs, filters=[Filters.regexp("title", filter_re)])
+        if regexp:
+            incs = Filters.apply(incs, filters=[Filters.regexp("title", filter_re)])
+
+        if excluded_filter_re:
+            incs = Filters.apply(incs, filters=[Filters.not_regexp("title", filter_excluded_re)])
 
         if service_re:
             incs = Transformations.apply(incs, {"service": Transformations.extract("service.summary")}, preserve=True)
@@ -244,21 +277,28 @@ def inc_list(ctx, everything, user, new, ack, output, snooze, resolve, high, low
                 if f == "assignee":
                     transformations[f] = Transformations.extract_assignees()
                 if f == "status":
-                    transformations[f] = Transformations.extract_decorate("status", color_map={STATUS_TRIGGERED: "red", STATUS_ACK: "yellow", STATUS_RESOLVED: "green"}, default_color="cyan", change_map={STATUS_TRIGGERED: "✘", STATUS_ACK: "✔", STATUS_RESOLVED: "✔"})
+                    transformations[f] = Transformations.extract_decorate(
+                        "status",
+                        color_map={STATUS_TRIGGERED: "red", STATUS_ACK: "yellow", STATUS_RESOLVED: "green"},
+                        default_color="cyan",
+                        change_map={STATUS_TRIGGERED: "✘", STATUS_ACK: "✔", STATUS_RESOLVED: "✔"},
+                    )
                 if f == "url":
                     transformations[f] = Transformations.extract("html_url")
                 if f == "urgency":
-                    transformations[f] = Transformations.extract_decorate("urgency", color_map={URGENCY_HIGH: "red", URGENCY_LOW: "green"}, change_map={URGENCY_HIGH: "HIGH", URGENCY_LOW: "LOW"})
+                    transformations[f] = Transformations.extract_decorate(
+                        "urgency", color_map={URGENCY_HIGH: "red", URGENCY_LOW: "green"}, change_map={URGENCY_HIGH: "HIGH", URGENCY_LOW: "LOW"}
+                    )
                 if f == "service.summary":
                     transformations["service"] = Transformations.extract("service.summary")
                 if f in ["title", "urgency"]:
-                    def mapper(item:str, d:dict) -> str:
+
+                    def mapper(item: str, d: dict) -> str:
                         if "urgency" in d and d["urgency"] == URGENCY_HIGH:
                             return f"[red]{item}[/red]"
                         return f"[cyan]{item}[/cyan]"
 
-                    transformations[f] = Transformations.extract_decorate(f, default_color="cyan", color_map={
-                                                                 URGENCY_HIGH: "red"}, map_func=mapper)
+                    transformations[f] = Transformations.extract_decorate(f, default_color="cyan", color_map={URGENCY_HIGH: "red"}, map_func=mapper)
                 if f in ["created_at", "last_status_change_at"]:
                     transformations[f] = Transformations.extract_date(f)
                 if f in ["alerts"]:
@@ -275,15 +315,10 @@ def inc_list(ctx, everything, user, new, ack, output, snooze, resolve, high, low
                 s += f"{i[f]}\t"
             print(s)
 
-
         if sort_by:
+            sort_fields: list[str] = sort_by.split(",") if "," in sort_by else [sort_by]
             try:
-                sort_fields: str|list[str] = sort_by.split(",")  if ',' in sort_by else sort_by
-
-                if isinstance(sort_fields, list) and len(sort_fields) > 1:
-                    filtered = sorted(filtered, key=lambda x: [x[k] for k in sort_fields], reverse=reverse_sort)
-                else:
-                    filtered = sorted(filtered, key=lambda x: x[sort_fields], reverse=reverse_sort)
+                filtered = sorted(filtered, key=lambda x: [x[k] for k in sort_fields], reverse=reverse_sort)
             except KeyError:
                 print(f"[red]Invalid sort field: {sort_by}[/red]")
                 print(f"[yellow]Available fields: {', '.join(fields)}[/yellow]")
@@ -314,8 +349,9 @@ def inc_list(ctx, everything, user, new, ack, output, snooze, resolve, high, low
         time.sleep(timeout)
         console.clear()
 
+
 @main.group(help="Operate on Services", name="svc")
-@click.option( "-c", "--config", envvar="PDH_CONFIG", default="~/.config/pdh.yaml", help="Configuration file location (default: ~/.config/pdh.yaml)" )
+@click.option("-c", "--config", envvar="PDH_CONFIG", default="~/.config/pdh.yaml", help="Configuration file location (default: ~/.config/pdh.yaml)")
 @click.pass_context
 def svc(ctx, config):
     cfg = load_and_validate(config)
@@ -334,8 +370,9 @@ def svc_list(ctx, output, fields, sort_by, reverse_sort, status):
     if not PDH.list_services(ctx.obj, output, fields, sort_by, reverse_sort, status):
         sys.exit(1)
 
+
 @main.group(help="Operate on Teams", name="teams")
-@click.option( "-c", "--config", envvar="PDH_CONFIG", default="~/.config/pdh.yaml", help="Configuration file location (default: ~/.config/pdh.yaml)", )
+@click.option("-c", "--config", envvar="PDH_CONFIG", default="~/.config/pdh.yaml", help="Configuration file location (default: ~/.config/pdh.yaml)")
 @click.pass_context
 def teams(ctx, config):
     cfg = load_and_validate(config)
@@ -350,7 +387,6 @@ def teams(ctx, config):
 def teams_mine(ctx, output, fields) -> None:
     if not PDH.list_teams(ctx.obj, mine=True, output=output, fields=fields):
         sys.exit(1)
-
 
 
 @teams.command(help="List teams in a pagerduty account", name="ls")

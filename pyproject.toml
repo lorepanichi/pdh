@@ -1,12 +1,12 @@
 [project]
 name = "pdh"
-version = "0.8.0"
+version = "0.8.1"
 description = "Pagerduty CLI for Humans"
 authors = [
-    {name = "Manuel Bovo",email = "manuel.bovo@gmail.com"}
+    {name = "Manuel Bovo", email = "manuel.bovo@gmail.com"}
 ]
 license = {text = "GPL-3.0-or-later"}
-urls ={"Source" = "https://github.com/mbovo/pdh"}
+urls = {"Source" = "https://github.com/mbovo/pdh"}
 readme = "README.md"
 requires-python = ">=3.11,<4.0"
 dependencies = [
@@ -46,16 +46,16 @@ max-line-length = 172
 ignore = "E203"
 
 [tool.ruff]
+line-length = 172
+
+[tool.ruff.lint]
 select = [
     "E",  # pycodestyle errors
-
     "F",  # pyflakes
     "C",  # flake8-comprehensions
 ]
-line-length = 172
-# Allow unused variables when underscore-prefixed.
 ignore = [
-    "E501",
+    "E501", # Line too long
     "C408", # Unnecessary dict call - rewrite as a literal.
     "C901", # Function is too complex
     "C416", # Unnecessary list comprehension

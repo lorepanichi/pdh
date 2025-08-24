@@ -26,7 +26,9 @@ from dikdik import Dict as DikDik
 """
 
 
-def apply(objects: List[Any] | List[Dict[Any, Any]] | Iterator[Any], transformers: Dict[str, Callable[[Dict], Any]] | None = None, preserve: bool = False) -> List[Any] | List[Dict[Any, Any]] | Iterator[Any]:
+def apply(
+    objects: List[Any] | List[Dict[Any, Any]] | Iterator[Any], transformers: Dict[str, Callable[[Dict], Any]] | None = None, preserve: bool = False
+) -> List[Any] | List[Dict[Any, Any]] | Iterator[Any]:
     """
     Apply a set of transformation functions to a list or iterator of objects.
 
@@ -57,7 +59,15 @@ def apply(objects: List[Any] | List[Dict[Any, Any]] | Iterator[Any], transformer
 
     return ret
 
-def extract(path: str, default: str | None = None) -> Callable[[Dict,], Any]:
+
+def extract(
+    path: str, default: str | None = None
+) -> Callable[
+    [
+        Dict,
+    ],
+    Any,
+]:
     """
     Extracts a value from a dictionary based on a specified field path dot separated.
     If default is not specified, it will raise a KeyError when the field is not found.
@@ -70,7 +80,14 @@ def extract(path: str, default: str | None = None) -> Callable[[Dict,], Any]:
     return extract_change(path, default=default, change_map=None)
 
 
-def extract_change(path: str, change_map: Dict[str, str] | None = None, default: str|None = None) -> Callable[[Dict,], Any]:
+def extract_change(
+    path: str, change_map: Dict[str, str] | None = None, default: str | None = None
+) -> Callable[
+    [
+        Dict,
+    ],
+    Any,
+]:
     """
     Extracts a value from a dictionary based on a specified path and optionally maps it to a new value.
     Args:
@@ -82,6 +99,7 @@ def extract_change(path: str, change_map: Dict[str, str] | None = None, default:
     Raises:
       KeyError: If the specified path does not exist in the dictionary and no default value is provided.
     """
+
     def f(i: dict) -> Any:
         try:
             # recursively return inner fields if they exist in the form of "field.subfield"
@@ -92,7 +110,7 @@ def extract_change(path: str, change_map: Dict[str, str] | None = None, default:
                     return default
                 raise KeyError(f"Path '{path}' not found in the dictionary.")
             ret = matches[0]
-            #ret = DikDik.get_path(i, path)
+            # ret = DikDik.get_path(i, path)
             if change_map and ret in change_map.keys():
                 return change_map[ret]
             return ret
@@ -112,27 +130,34 @@ def extract_date(field_name: str, format: str = "%Y-%m-%dT%H:%M:%SZ", tz: timezo
       - tz (timezone, optional): The timezone to use for the current time. Defaults to None.
       - Callable[[Dict], Any]: A function that takes a dictionary and returns a human-readable relative time string.
     """
+
     def f(i: dict) -> str:
-      expr = jsonpath_ng.parse(field_name)
-      val = [match.value for match in expr.find(i)][0]
+        expr = jsonpath_ng.parse(field_name)
+        val = [match.value for match in expr.find(i)][0]
 
-      #val = DikDik.get_path(i, field_name)
-      duration = datetime.now(tz) - datetime.strptime(val, format)
-      date = {}
-      date["d"], remaining = divmod(duration.total_seconds(), 86_400)
-      date["h"], remaining = divmod(remaining, 3_600)
-      date["m"], date["s"] = divmod(remaining, 60)
+        # val = DikDik.get_path(i, field_name)
+        duration = datetime.now(tz) - datetime.strptime(val, format)
+        date = {}
+        date["d"], remaining = divmod(duration.total_seconds(), 86_400)
+        date["h"], remaining = divmod(remaining, 3_600)
+        date["m"], date["s"] = divmod(remaining, 60)
 
-      time_parts = [f"{round(value)}{name}" for name,
-                    value in date.items() if value > 0]
-      if time_parts:
-          return " ".join(time_parts) + " ago"
-      else:
-          return f"{date['s']}s ago"
+        time_parts = [f"{round(value)}{name}" for name, value in date.items() if value > 0]
+        if time_parts:
+            return " ".join(time_parts) + " ago"
+        else:
+            return f"{date['s']}s ago"
+
     return f
 
 
-def extract_decorate(field_name: str, color_map: dict | None = None, default_color: str | None = None, change_map: dict | None = None, map_func: Callable[[str, dict], str] | None = None,) -> Callable[[dict], str]:
+def extract_decorate(
+    field_name: str,
+    color_map: dict | None = None,
+    default_color: str | None = None,
+    change_map: dict | None = None,
+    map_func: Callable[[str, dict], str] | None = None,
+) -> Callable[[dict], str]:
     """
     Retrieve a specific field by name and optionally apply color and formatting.
     Optionally accept a map_func function to change the field value with custom logic
@@ -147,15 +172,16 @@ def extract_decorate(field_name: str, color_map: dict | None = None, default_col
     Returns:
     - Callable: A function that takes a dictionary and returns the transformed field value as a string.
     """
+
     def f(i: dict) -> str:
         expr = jsonpath_ng.parse(field_name)
         item = [match.value for match in expr.find(i)][0]
-        #item = DikDik.get_path(i, field_name)
+        # item = DikDik.get_path(i, field_name)
 
         if not item:
             return ""
         # escape [ and ] to avoid rich formatting clashes
-        if '[' in item or ']' in item:
+        if "[" in item or "]" in item:
             ret = f"{item}".replace("[", "\\[")
         else:
             ret = item
@@ -185,9 +211,10 @@ def extract_decorate(field_name: str, color_map: dict | None = None, default_col
 
 
 def extract_assignees(color: str = "magenta") -> Callable[[dict], str]:
-  def f(i: dict) -> str:
-    return f'[{color}]{", ".join([a["assignee"]["summary"] for a in i["assignments"]])}[/{color}]'
-  return f
+    def f(i: dict) -> str:
+        return f"[{color}]{', '.join([a['assignee']['summary'] for a in i['assignments']])}[/{color}]"
+
+    return f
 
 
 def extract_alerts(field_name, alert_fields: list[str] = ["id", "summary", "created_at", "status"]):
@@ -199,7 +226,6 @@ def extract_alerts(field_name, alert_fields: list[str] = ["id", "summary", "crea
         for alert in alerts:
             alert_obj = dict()
             for field in alert_fields:
-
                 subval = alert[field] if field in alert else None
                 if subval is not None:
                     DikDik.set_path(alert_obj, field, subval)
@@ -209,8 +235,10 @@ def extract_alerts(field_name, alert_fields: list[str] = ["id", "summary", "crea
 
     return f
 
-def extract_pending_actions() :
+
+def extract_pending_actions():
     return lambda i: str([f"{a['type']} at {a['at']}" for a in i["pending_actions"]])
+
 
 def extract_users_teams():
     return lambda x: ",".join([t["summary"] for t in x["teams"]])
