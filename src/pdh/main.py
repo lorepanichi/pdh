@@ -15,28 +15,13 @@
 # along with this program. If not, see <http://www.gnu.org/licenses/>.
 #
 import importlib.metadata
-import os
-import re
 import sys
-import time
 
 import click
-from rich import print
-from rich.console import Console
 
-from . import Filters, Transformations
 from .config import load_and_validate, setup_config
 from .core import PDH
-from .output import VALID_OUTPUTS, print_items
-from .pd import (
-    DEFAULT_URGENCIES,
-    STATUS_ACK,
-    STATUS_RESOLVED,
-    STATUS_TRIGGERED,
-    URGENCY_HIGH,
-    URGENCY_LOW,
-    PagerDuty,
-)
+from .output import VALID_OUTPUTS
 
 
 @click.group(help="PDH - PagerDuty for Humans")
@@ -147,207 +132,9 @@ def reassign(ctx, incident, user):
 @click.option("--sort", "sort_by", required=False, help="Sort by field name", default=None)
 @click.option("--reverse", "reverse_sort", required=False, help="Reverse the sort", is_flag=True, default=False)
 @click.option("-T", "--teams", "teams", required=False, help="Filter only incidents assigned to this team IDs", default=None)
-def inc_list(
-    ctx,
-    everything,
-    user,
-    new,
-    ack,
-    output,
-    snooze,
-    resolve,
-    high,
-    low,
-    watch,
-    timeout,
-    regexp,
-    excluded_filter_re,
-    rules,
-    rules_path,
-    fields,
-    alerts,
-    alert_fields,
-    service_re,
-    excluded_service_re,
-    sort_by,
-    reverse_sort,
-    teams,
-):
-    pd = PagerDuty(ctx.obj)
-
-    # Prepare defaults
-    status = [STATUS_TRIGGERED]
-    urgencies = DEFAULT_URGENCIES
-    if high:
-        urgencies = [URGENCY_HIGH]
-    if low:
-        urgencies = [URGENCY_LOW]
-    if not new:
-        status.append(STATUS_ACK)
-    userid = None
-    if user:
-        userid = pd.users.id(query=user, key="name")
-
-    try:
-        if regexp:
-            filter_re = re.compile(regexp)
-        if excluded_filter_re:
-            filter_excluded_re = re.compile(excluded_filter_re)
-    except re.error as e:
-        print(f"[red]Invalid regular expression: {str(e)}[/red]")
-        sys.exit(-2)
-
-    incs = []
-    console = Console()
-    # fallback to configured userid
-
-    # set fields that will be displayed
-    if type(fields) is str:
-        fields = fields.lower().strip().split(",")
-    else:
-        fields = ["id", "assignee", "title", "status", "created_at", "service.summary"]
-    if alerts:
-        fields.append("alerts")
-
-    if type(alert_fields) is str:
-        alert_fields = alert_fields.lower().strip().split(",")
-    else:
-        alert_fields = ["status", "created_at", "service.summary", "body.details"]
-
-    if type(teams) is str:
-        if teams == "mine":
-            teamNames = dict(pd.me)["teams"] if "teams" in dict(pd.me) else []
-            teams = [t["id"] for t in teamNames if "id" in t]
-        else:
-            teams = teams.lower().strip().split(",")
-
-    if not everything and not userid:
-        userid = pd.cfg["uid"]
-    while True:
-        incs = pd.incidents.list(userid, statuses=status, urgencies=urgencies, teams=teams)
-
-        if rules:
-            scripts = []
-            ppath = os.path.expanduser(os.path.expandvars(rules_path))
-            for root, _, filenames in os.walk(ppath):
-                for filename in filenames:
-                    fullpath = os.path.join(root, filename)
-                    if os.access(fullpath, os.X_OK):
-                        scripts.append(fullpath)
-
-            if len(scripts) == 0:
-                print(f"[yellow]No rules found in {ppath}[/yellow]")
-
-            def printFunc(name: str):
-                print("[green]Applied rule:[/green]", name)
-
-            def errFunc(error: str):
-                print("[red]Error:[/red]", error)
-
-            ret = pd.incidents.apply(incs, scripts, printFunc, errFunc)
-            if type(ret) is not str:
-                incs = list(ret)
-            else:
-                print(ret)
-
-        if regexp:
-            incs = Filters.apply(incs, filters=[Filters.regexp("title", filter_re)])
-
-        if excluded_filter_re:
-            incs = Filters.apply(incs, filters=[Filters.not_regexp("title", filter_excluded_re)])
-
-        if service_re:
-            incs = Transformations.apply(incs, {"service": Transformations.extract("service.summary")}, preserve=True)
-            incs = Filters.apply(incs, [Filters.regexp("service", service_re)])
-
-        if excluded_service_re:
-            incs = Transformations.apply(incs, {"service": Transformations.extract("service.summary")}, preserve=True)
-            incs = Filters.apply(incs, [Filters.not_regexp("service", excluded_service_re)])
-
-        if alerts:
-            for i in incs:
-                i["alerts"] = pd.incidents.alerts(i["id"])
-
-        # Build filtered list for output
-        if output != "raw":
-            transformations = dict()
-            for f in fields:
-                transformations[f] = Transformations.extract(f)
-                # special cases
-                if f == "assignee":
-                    transformations[f] = Transformations.extract_assignees()
-                if f == "status":
-                    transformations[f] = Transformations.extract_decorate(
-                        "status",
-                        color_map={STATUS_TRIGGERED: "red", STATUS_ACK: "yellow", STATUS_RESOLVED: "green"},
-                        default_color="cyan",
-                        change_map={STATUS_TRIGGERED: "✘", STATUS_ACK: "✔", STATUS_RESOLVED: "✔"},
-                    )
-                if f == "url":
-                    transformations[f] = Transformations.extract("html_url")
-                if f == "urgency":
-                    transformations[f] = Transformations.extract_decorate(
-                        "urgency", color_map={URGENCY_HIGH: "red", URGENCY_LOW: "green"}, change_map={URGENCY_HIGH: "HIGH", URGENCY_LOW: "LOW"}
-                    )
-                if f == "service.summary":
-                    transformations["service"] = Transformations.extract("service.summary")
-                if f in ["title", "urgency"]:
-
-                    def mapper(item: str, d: dict) -> str:
-                        if "urgency" in d and d["urgency"] == URGENCY_HIGH:
-                            return f"[red]{item}[/red]"
-                        return f"[cyan]{item}[/cyan]"
-
-                    transformations[f] = Transformations.extract_decorate(f, default_color="cyan", color_map={URGENCY_HIGH: "red"}, map_func=mapper)
-                if f in ["created_at", "last_status_change_at"]:
-                    transformations[f] = Transformations.extract_date(f)
-                if f in ["alerts"]:
-                    transformations[f] = Transformations.extract_alerts(f, alert_fields)
-            filtered = Transformations.apply(incs, transformations)
-        else:
-            # raw output, using json format
-            filtered = incs
-
-        # define here how print in "plain" way (ie if output=plain)
-        def plain_print_f(i):
-            s = ""
-            for f in fields:
-                s += f"{i[f]}\t"
-            print(s)
-
-        if sort_by:
-            sort_fields: list[str] = sort_by.split(",") if "," in sort_by else [sort_by]
-            try:
-                filtered = sorted(filtered, key=lambda x: [x[k] for k in sort_fields], reverse=reverse_sort)
-            except KeyError:
-                print(f"[red]Invalid sort field: {sort_by}[/red]")
-                print(f"[yellow]Available fields: {', '.join(fields)}[/yellow]")
-                sys.exit(-2)
-
-        print_items(filtered, output, plain_print_f=plain_print_f)
-
-        # now apply actions like snooze, resolve, ack...
-        ids = [i["id"] for i in incs]
-        if ack:
-            pd.incidents.ack(incs)
-            if output not in ["yaml", "json"]:
-                for i in ids:
-                    print(f"Marked {i} as [yellow]ACK[/yellow]")
-        if snooze:
-            pd.incidents.snooze(incs)
-            if output not in ["yaml", "json"]:
-                for i in ids:
-                    print(f"Snoozing incident {i} for 4h")
-        if resolve:
-            pd.incidents.resolve(incs)
-            if output not in ["yaml", "json"]:
-                for i in ids:
-                    print(f"Mark {i} as [green]RESOLVED[/green]")
-
-        if not watch:
-            break
-        time.sleep(timeout)
-        console.clear()
+def list_incidents(ctx, **kwargs):
+    if not PDH.list_incidents(ctx.obj, **kwargs):
+        sys.exit(1)
 
 
 @main.group(help="Operate on Services", name="svc")
@@ -366,7 +153,7 @@ def svc(ctx, config):
 @click.option("--reverse", "reverse_sort", required=False, help="Reverse the sort", is_flag=True, default=False)
 @click.option("-s", "--status", "status", required=False, help="Filter for service status", default="active,warning,critical")
 @click.pass_context
-def svc_list(ctx, output, fields, sort_by, reverse_sort, status):
+def list_services(ctx, output, fields, sort_by, reverse_sort, status):
     if not PDH.list_services(ctx.obj, output, fields, sort_by, reverse_sort, status):
         sys.exit(1)
 

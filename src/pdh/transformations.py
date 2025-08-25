@@ -14,11 +14,12 @@
 # You should have received a copy of the GNU General Public License
 # along with this program. If not, see <http://www.gnu.org/licenses/>.
 #
-from typing import Any, Callable, Dict, Iterator, List
 from datetime import datetime, timezone
+from typing import Any, Callable, Dict, Iterator, List
+
 import jsonpath_ng
-from rich.pretty import pretty_repr
 from dikdik import Dict as DikDik
+from rich.pretty import pretty_repr
 
 """
   Transformations module contains functions to extract and mutate dictionary fields.
